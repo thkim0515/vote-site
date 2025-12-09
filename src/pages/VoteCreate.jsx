@@ -43,6 +43,30 @@ const Wrap = styled.div`
     opacity: 0.5;
     pointer-events: none;
   }
+
+  /* 인접 달 날짜는 연하게 표시 */
+  .neighbor-tile {
+    opacity: 0.35 !important;
+    color: #999 !important;
+  }
+
+  /* 일요일 빨간색 */
+  .sunday-tile {
+    color: #ff1744 !important;
+    font-weight: bold;
+  }
+
+  /* 공휴일 빨간색 */
+  .holiday-tile {
+    color: #d50000 !important;
+    font-weight: bold;
+  }
+
+  /* 토요일 파란색 */
+  .saturday-tile {
+    color: #1976d2 !important;
+    font-weight: bold;
+  }
 `;
 
 const ChipBox = styled.div`
@@ -142,23 +166,53 @@ export default function VoteCreate() {
 
   const todayKey = formatDateKey(new Date());
 
-  /*  
-    달력에서 선택 여부 판단 시 baseKey만 비교하도록 수정
-  */
-  const tileClassName = ({ date }) => {
+  /* ---------------- 날짜 스타일 지정 ---------------- */
+  const tileClassName = ({ date, view }) => {
+    if (view !== "month") return "";
+
     const baseKey = formatDateKey(date);
+    const holiday = hd.isHoliday(date);
+    const today = new Date();
 
-    if (baseKey < todayKey) return "disabled-tile";
+    const classes = [];
 
-    // STEP1: 마감일 선택
-    if (step === 1 && deadline?.startsWith(baseKey)) return "selected-tile";
+    /* 1. 인접 달 날짜 → 연하게 (색상 적용 금지) */
+    if (date.getMonth() !== today.getMonth()) {
+      classes.push("neighbor-tile");
+      return classes.join(" "); // 인접달은 나머지 색상 무조건 비활성
+    }
 
-    // STEP2: 선택된 날짜들 (요일 포함)
-    if (step === 2 && selectedDates.some((d) => d.startsWith(baseKey)))
-      return "selected-tile";
+    /* 2. 지난 날짜 */
+    if (baseKey < todayKey) {
+      classes.push("disabled-tile");
+      return classes.join(" ");
+    }
 
-    return "";
+    /* 3. 공휴일 */
+    if (holiday) {
+      classes.push("holiday-tile");
+    } 
+    /* 4. 일요일 */
+    else if (date.getDay() === 0) {
+      classes.push("sunday-tile");
+    } 
+    /* 5. 토요일 */
+    else if (date.getDay() === 6) {
+      classes.push("saturday-tile");
+    }
+
+    /* 6. 선택된 날짜 */
+    if (step === 1 && deadline?.startsWith(baseKey)) {
+      classes.push("selected-tile");
+    }
+
+    if (step === 2 && selectedDates.some((d) => d.startsWith(baseKey))) {
+      classes.push("selected-tile");
+    }
+
+    return classes.join(" ");
   };
+
 
   const tileDisabled = ({ date }) => formatDateKey(date) < todayKey;
 
@@ -168,13 +222,11 @@ export default function VoteCreate() {
 
     if (baseKey < todayKey) return;
 
-    // STEP1: 마감일 지정
     if (step === 1) {
       setDeadline(fullKey);
       return;
     }
 
-    // STEP2: 투표 대상 날짜 선택
     if (step === 2) {
       setSelectedDates((prev) =>
         prev.includes(fullKey)
@@ -212,8 +264,10 @@ export default function VoteCreate() {
         {step === 1 && (
           <>
             <h3>1단계: 마감 날짜를 선택해주세요</h3>
+
             <Calendar
               locale="ko-KR"
+              calendarType="gregory"
               onClickDay={onClickDay}
               tileClassName={tileClassName}
               tileDisabled={tileDisabled}
@@ -237,6 +291,7 @@ export default function VoteCreate() {
 
             <Calendar
               locale="ko-KR"
+              calendarType="gregory"
               onClickDay={onClickDay}
               tileClassName={tileClassName}
               tileDisabled={tileDisabled}
