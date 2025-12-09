@@ -4,14 +4,22 @@ import { Link } from "react-router-dom";
 import PageContainer from "../components/PageContainer";
 import VoteCard from "../components/VoteCard";
 
+import { getVotes } from "../api/api";
+
 export default function Votemain() {
   const [votes, setVotes] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:4000/api/getVotes")
-      .then((res) => res.json())
-      .then((data) => setVotes(data))
-      .catch(() => setVotes([]));
+    async function loadVotes() {
+      try {
+        const data = await getVotes();
+        setVotes(data);
+      } catch {
+        setVotes([]);
+      }
+    }
+
+    loadVotes();
   }, []);
 
   return (

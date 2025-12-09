@@ -4,6 +4,9 @@ import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import PageContainer from "../components/PageContainer";
 
+import { getVotes, submitVote } from "../api/api";
+
+/* ---------------- 스타일 ---------------- */
 const VoteBox = styled.div`
   margin-top: 20px;
   padding: 16px;
@@ -21,26 +24,36 @@ const MenuButton = styled.button`
   cursor: pointer;
 `;
 
+/* ---------------- 컴포넌트 ---------------- */
 export default function VoteSelectDate() {
   const [votes, setVotes] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [filteredVotes, setFilteredVotes] = useState([]);
-  const [selectedMenus, setSelectedMenus] = useState({}); // { voteId: "선택된 메뉴" }
+  const [selectedMenus, setSelectedMenus] = useState({}); // { voteId: 선택한메뉴 }
 
+  /* 전체 투표 불러오기 (api.js 활용) */
   useEffect(() => {
-    fetch("http://localhost:4000/api/getVotes")
-      .then((res) => res.json())
-      .then(setVotes)
-      .catch(() => alert("투표 데이터를 불러오는 데 실패했습니다."));
+    async function loadVotes() {
+      try {
+        const data = await getVotes();
+        setVotes(data);
+      } catch {
+        alert("투표 데이터를 불러오는 데 실패했습니다.");
+      }
+    }
+    loadVotes();
   }, []);
 
-  // 날짜 변경 시 해당 날짜 투표만 필터링
+  /* 날짜 클릭 → 해당 날짜에 해당하는 투표 필터 */
   const handleDateChange = (date) => {
-    const dateStr = date.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).replace(/\. /g, "-").replace(".", "");
+    const dateStr = date
+      .toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/\. /g, "-")
+      .replace(".", "");
 
     setSelectedDate(dateStr);
 
@@ -48,36 +61,30 @@ export default function VoteSelectDate() {
     setFilteredVotes(matches);
   };
 
-  // 투표 저장 (선택 결과만 저장)
+  /* 투표 제출 */
   const handleVoteSubmit = async (voteId, selectedMenu) => {
-    if (!selectedMenu) return alert("메뉴를 선택해주세요");
+    if (!selectedMenu) {
+      alert("메뉴를 선택해주세요");
+      return;
+    }
 
     try {
-      const res = await fetch("http://localhost:4000/api/saveVote", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...votes.find((v) => v.id === voteId),
-          results: {
-            ...(votes.find((v) => v.id === voteId)?.results || {}),
-            you: selectedMenu,
-          },
-        }),
+      await submitVote({
+        id: voteId,
+        dates: [selectedDate], // 선택된 날짜 1개
+        menu: selectedMenu,
       });
 
-      if (res.ok) {
-        alert("투표 완료");
-      } else {
-        alert("저장 실패");
-      }
-    } catch (err) {
-      alert("통신 오류");
+      alert("투표 완료");
+    } catch {
+      alert("투표 저장 실패");
     }
   };
 
   return (
     <PageContainer>
       <h2>날짜를 선택하세요</h2>
+
       <Calendar
         locale="ko-KR"
         calendarType="gregory"
@@ -94,19 +101,22 @@ export default function VoteSelectDate() {
             filteredVotes.map((vote) => (
               <VoteBox key={vote.id}>
                 <h4>메뉴 투표</h4>
-                {vote.menu && (
+
+                {vote.menuList?.map((menu) => (
                   <MenuButton
-                    selected={selectedMenus[vote.id] === vote.menu}
+                    key={menu}
+                    selected={selectedMenus[vote.id] === menu}
                     onClick={() =>
                       setSelectedMenus((prev) => ({
                         ...prev,
-                        [vote.id]: vote.menu,
+                        [vote.id]: menu,
                       }))
                     }
                   >
-                    {vote.menu}
+                    {menu}
                   </MenuButton>
-                )}
+                ))}
+
                 <div style={{ marginTop: "10px" }}>
                   <button
                     onClick={() =>

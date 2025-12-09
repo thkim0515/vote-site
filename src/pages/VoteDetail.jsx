@@ -1,7 +1,12 @@
+// src/pages/VoteDetail.jsx
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import PageContainer from "../components/PageContainer";
+
+import { getVoteById, submitVote } from "../api/api";
+import { getVoterId } from "../utils/voter";
 
 /* 스타일 */
 const DateItem = styled.div`
@@ -24,6 +29,7 @@ const MenuItem = styled.div`
   border-radius: 8px;
   cursor: pointer;
   background: ${({ active }) => (active ? "#ffe0b2" : "#fff")};
+
   &:hover {
     background: #fff3e0;
   }
@@ -40,6 +46,28 @@ const VoteButton = styled.button`
   font-size: 16px;
 `;
 
+const ResultButton = styled.button`
+  width: 100%;
+  padding: 14px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  margin-top: 12px;
+  font-size: 16px;
+`;
+
+const HomeButton = styled.button`
+  width: 100%;
+  padding: 14px;
+  background: #444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-size: 16px;
+`;
+
 export default function VoteDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -48,15 +76,16 @@ export default function VoteDetail() {
   const [selectedDates, setSelectedDates] = useState([]);
   const [selectedMenu, setSelectedMenu] = useState("");
 
+  /* 투표 데이터 가져오기 */
   useEffect(() => {
-    fetch("http://localhost:4000/api/getVotes")
-      .then((res) => res.json())
-      .then((list) => {
-        const found = list.find((v) => String(v.id) === id);
-        setVote(found);
-      });
+    async function loadVote() {
+      const found = await getVoteById(id);
+      setVote(found);
+    }
+    loadVote();
   }, [id]);
 
+  /* 날짜 선택 */
   const onClickDate = (date) => {
     setSelectedDates((prev) =>
       prev.includes(date)
@@ -65,25 +94,36 @@ export default function VoteDetail() {
     );
   };
 
-  const submitVote = async () => {
+  /* 투표 제출 */
+  const onSubmitVote = async () => {
     if (selectedDates.length === 0 || !selectedMenu) {
       alert("날짜와 메뉴를 모두 선택해주세요");
       return;
     }
 
-    const res = await fetch("http://localhost:4000/api/vote", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, dates: selectedDates, menu: selectedMenu }),
-    });
+    const voterId = getVoterId(); // UUID 가져오기
 
-    if (res.ok) {
-      alert("투표 완료");
-      navigate(`/vote/result/${id}`); // ✅ 결과 페이지로 이동
-    } else {
-      alert("투표 실패");
+    try {
+      const result = await submitVote({
+        id,
+        dates: selectedDates,
+        menu: selectedMenu,
+        voterId, // 서버에 전달 (중복투표 방지)
+      });
+
+      if (result?.message) {
+        alert("투표 완료");
+        navigate(`/vote/result/${id}`);
+      }
+    } catch (err) {
+      alert("이미 투표한 사용자입니다.");
     }
   };
+
+  /* 이동 관련 함수 */
+  const goHome = () => navigate("/");
+  const goResult = () => navigate(`/vote/result/${id}`);
+
 
   if (!vote) {
     return (
@@ -119,7 +159,9 @@ export default function VoteDetail() {
         </MenuItem>
       ))}
 
-      <VoteButton onClick={submitVote}>투표 제출</VoteButton>
+      <VoteButton onClick={onSubmitVote}>투표 제출</VoteButton>
+      <ResultButton onClick={goResult}>결과 보기</ResultButton>
+      <HomeButton onClick={goHome}>홈으로</HomeButton>
     </PageContainer>
   );
 }
