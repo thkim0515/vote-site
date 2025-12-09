@@ -9,6 +9,21 @@ import { getVoteById, submitVote } from "../api/api";
 import { getVoterId } from "../utils/voter";
 
 /* 스타일 */
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const ShareButton = styled.button`
+  padding: 8px 12px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+`;
+
 const DateItem = styled.div`
   padding: 10px;
   border: 1px solid #ddd;
@@ -76,22 +91,55 @@ export default function VoteDetail() {
   const [selectedDates, setSelectedDates] = useState([]);
   const [selectedMenu, setSelectedMenu] = useState("");
 
-  /* 투표 데이터 가져오기 */
+  const voterId = getVoterId();
+
+  /* 투표 데이터 가져오기 + 이미 참여한 사람 처리 */
   useEffect(() => {
     async function loadVote() {
       const found = await getVoteById(id);
+      if (!found) return;
+
+      let voters = [];
+
+      // voters가 배열일 때
+      if (Array.isArray(found.voters)) {
+        voters = found.voters;
+      }
+
+      // voters가 객체일 때
+      else if (found.voters && typeof found.voters === "object") {
+        voters = Object.keys(found.voters);
+      }
+
+      // 이미 투표한 사용자 체크
+      if (voters.includes(voterId)) {
+        alert("이미 투표를 진행하였습니다.");
+        setTimeout(() => navigate(`/vote/result/${id}`), 0);
+        return;
+      }
+
       setVote(found);
     }
+
     loadVote();
   }, [id]);
+
 
   /* 날짜 선택 */
   const onClickDate = (date) => {
     setSelectedDates((prev) =>
       prev.includes(date)
-        ? prev.filter((d) => d !== date)
+        ? prev.filter((item) => item !== date)
         : [...prev, date]
     );
+  };
+
+  /* 공유하기 */
+  const share = async () => {
+    const url = `${window.location.origin}/vote/detail/${id}`;
+    const text = `투표하세요!\n\n링크: ${url}`;
+    await navigator.clipboard.writeText(text);
+    alert("투표 링크가 복사되었습니다.");
   };
 
   /* 투표 제출 */
@@ -101,29 +149,25 @@ export default function VoteDetail() {
       return;
     }
 
-    const voterId = getVoterId(); // UUID 가져오기
-
     try {
       const result = await submitVote({
         id,
         dates: selectedDates,
         menu: selectedMenu,
-        voterId, // 서버에 전달 (중복투표 방지)
+        voterId,
       });
 
       if (result?.message) {
         alert("투표 완료");
         navigate(`/vote/result/${id}`);
       }
-    } catch (err) {
+    } catch {
       alert("이미 투표한 사용자입니다.");
     }
   };
 
-  /* 이동 관련 함수 */
   const goHome = () => navigate("/");
   const goResult = () => navigate(`/vote/result/${id}`);
-
 
   if (!vote) {
     return (
@@ -135,7 +179,10 @@ export default function VoteDetail() {
 
   return (
     <PageContainer>
-      <h2>투표하기</h2>
+      <Header>
+        <h2>투표하기</h2>
+        <ShareButton onClick={share}>공유</ShareButton>
+      </Header>
 
       <h3>날짜 선택 (복수 선택 가능)</h3>
       {vote.dates.map((d) => (

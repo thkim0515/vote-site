@@ -1,4 +1,6 @@
-const BASE_URL = "http://localhost:4000/api";
+// const BASE_URL = "http://localhost:4000/api";
+const BASE_URL = "http://192.168.122.81:4000/api";
+
 
 /* -----------------------------
    공통 fetch 래퍼 함수

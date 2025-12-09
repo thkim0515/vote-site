@@ -26,7 +26,19 @@ const Header = styled.div`
   font-weight: bold;
 `;
 
-/* 부드럽게 열리는 아코디언 컨테이너 */
+/* 수정된 요약 스타일 */
+const Summary = styled.div`
+  margin-top: 10px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #222;
+  background: #f0f7ff;
+  border-top: 1px solid #d0e3ff;
+  border-bottom: 1px solid #d0e3ff;
+  border-radius: 4px;
+`;
+
 const AnimatedContent = styled.div`
   max-height: ${({ open }) => (open ? "800px" : "0px")};
   overflow: hidden;
@@ -54,9 +66,25 @@ export default function VoteHistoryCard({ vote }) {
 
   const colors = ["#1976d2", "#ff9800", "#4caf50", "#e91e63", "#9c27b0"];
 
+  const getFirstRank = (obj = {}) => {
+    const arr = Object.entries(obj)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    return arr[0] || null;
+  };
+
+  const dateFirst = getFirstRank(vote.results?.dates);
+  const menuFirst = getFirstRank(vote.results?.menus);
+
   return (
     <Card onClick={() => setOpen(!open)}>
       <Header>{vote.deadline} 투표 결과</Header>
+
+      <Summary>
+        날짜 1위: {dateFirst ? dateFirst.name : "없음"} · 메뉴 1위:{" "}
+        {menuFirst ? menuFirst.name : "없음"}
+      </Summary>
 
       <AnimatedContent open={open}>
         <Content>

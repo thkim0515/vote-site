@@ -106,6 +106,9 @@ app.get("/api/getVotes", async (req, res) => {
 /* --------------------------
    서버 실행
 --------------------------- */
-app.listen(PORT, () => {
-  console.log(`Express 서버 실행 중: http://localhost:${PORT}`);
+// app.listen(PORT, () => {
+//   console.log(`Express 서버 실행 중: http://localhost:${PORT}`);
+// });
+app.listen(4000, "0.0.0.0", () => {
+  console.log("Server open on all network interfaces");
 });

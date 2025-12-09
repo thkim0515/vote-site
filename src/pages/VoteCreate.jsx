@@ -5,7 +5,7 @@ import "react-calendar/dist/Calendar.css";
 import Holidays from "date-holidays";
 import PageContainer from "../components/PageContainer";
 import { useNavigate } from "react-router-dom";
-import { saveVote } from "../api/api";   // ← api.js 함수 불러오기
+import { saveVote } from "../api/api";
 
 const hd = new Holidays("KR");
 
@@ -99,7 +99,19 @@ const SaveBtn = styled.button`
   font-size: 16px;
 `;
 
+const HomeButton = styled.button`
+  width: 100%;
+  padding: 14px;
+  background: #444;
+  color: white;
+  border-radius: 6px;
+  margin-top: 20px;
+  font-size: 16px;
+`;
+
 /* ---------------- 날짜 포맷 ---------------- */
+const days = ["일", "월", "화", "수", "목", "금", "토"];
+
 const formatDateKey = (date) =>
   date
     .toLocaleDateString("ko-KR", {
@@ -110,8 +122,13 @@ const formatDateKey = (date) =>
     .replace(/\. /g, "-")
     .replace(".", "");
 
-/* ---------------- 컴포넌트 ---------------- */
+const formatDateWithDay = (date) => {
+  const base = formatDateKey(date);
+  const day = days[date.getDay()];
+  return `${base} (${day})`;
+};
 
+/* ---------------- 컴포넌트 ---------------- */
 export default function VoteCreate() {
   const [step, setStep] = useState(1);
   const [deadline, setDeadline] = useState(null);
@@ -121,43 +138,52 @@ export default function VoteCreate() {
   const [selectedMenu, setSelectedMenu] = useState("");
 
   const navigate = useNavigate();
+  const goHome = () => navigate("/");
 
   const todayKey = formatDateKey(new Date());
 
-  /* ---- 캘린더 타일 비활성화 ---- */
-  const tileDisabled = ({ date }) => {
-    const key = formatDateKey(date);
-    return key < todayKey;
-  };
-
-  /* ---- 타일 스타일 ---- */
+  /*  
+    달력에서 선택 여부 판단 시 baseKey만 비교하도록 수정
+  */
   const tileClassName = ({ date }) => {
-    const key = formatDateKey(date);
-    if (key < todayKey) return "disabled-tile";
-    if (step === 1 && deadline === key) return "selected-tile";
-    if (step === 2 && selectedDates.includes(key)) return "selected-tile";
+    const baseKey = formatDateKey(date);
+
+    if (baseKey < todayKey) return "disabled-tile";
+
+    // STEP1: 마감일 선택
+    if (step === 1 && deadline?.startsWith(baseKey)) return "selected-tile";
+
+    // STEP2: 선택된 날짜들 (요일 포함)
+    if (step === 2 && selectedDates.some((d) => d.startsWith(baseKey)))
+      return "selected-tile";
+
     return "";
   };
 
-  /* ---- 날짜 클릭 ---- */
-  const onClickDay = (date) => {
-    const key = formatDateKey(date);
-    if (key < todayKey) return;
+  const tileDisabled = ({ date }) => formatDateKey(date) < todayKey;
 
+  const onClickDay = (date) => {
+    const baseKey = formatDateKey(date);
+    const fullKey = formatDateWithDay(date);
+
+    if (baseKey < todayKey) return;
+
+    // STEP1: 마감일 지정
     if (step === 1) {
-      setDeadline(key);
+      setDeadline(fullKey);
+      return;
     }
 
+    // STEP2: 투표 대상 날짜 선택
     if (step === 2) {
-      if (selectedDates.includes(key)) {
-        setSelectedDates(selectedDates.filter((d) => d !== key));
-      } else {
-        setSelectedDates([...selectedDates, key]);
-      }
+      setSelectedDates((prev) =>
+        prev.includes(fullKey)
+          ? prev.filter((d) => d !== fullKey)
+          : [...prev, fullKey]
+      );
     }
   };
 
-  /* ---- 메뉴 입력 ---- */
   const addMenu = () => {
     if (!menuInput.trim()) return;
     const newMenu = menuInput.trim();
@@ -166,11 +192,6 @@ export default function VoteCreate() {
     setMenuInput("");
   };
 
-  const handleMenuKeyDown = (e) => {
-    if (e.key === "Enter") addMenu();
-  };
-
-  /* ---- 투표 저장 제출(api.js 사용) ---- */
   const saveVoteHandler = async () => {
     const voteData = {
       deadline,
@@ -178,27 +199,21 @@ export default function VoteCreate() {
       menuList,
     };
 
-    try {
-      const result = await saveVote(voteData);  // ← api.js 호출
-      navigate(`/vote/detail/${result.id}`);
-    } catch {
-      alert("저장 실패");
-    }
+    const result = await saveVote(voteData);
+    navigate(`/vote/detail/${result.id}`);
   };
 
-  /* ---------------- 렌더링 ---------------- */
   return (
     <PageContainer>
       <Wrap>
         <h2>투표 만들기</h2>
 
-        {/* 1단계 ― 마감 날짜 선택 */}
+        {/* STEP 1 */}
         {step === 1 && (
           <>
             <h3>1단계: 마감 날짜를 선택해주세요</h3>
             <Calendar
               locale="ko-KR"
-              calendarType="gregory"
               onClickDay={onClickDay}
               tileClassName={tileClassName}
               tileDisabled={tileDisabled}
@@ -210,16 +225,18 @@ export default function VoteCreate() {
                 <SaveBtn onClick={() => setStep(2)}>다음</SaveBtn>
               </div>
             )}
+
+            <HomeButton onClick={goHome}>홈으로</HomeButton>
           </>
         )}
 
-        {/* 2단계 ― 날짜 선택 */}
+        {/* STEP 2 */}
         {step === 2 && (
           <>
             <h3>2단계: 투표 대상 날짜를 선택해주세요</h3>
+
             <Calendar
               locale="ko-KR"
-              calendarType="gregory"
               onClickDay={onClickDay}
               tileClassName={tileClassName}
               tileDisabled={tileDisabled}
@@ -242,8 +259,8 @@ export default function VoteCreate() {
 
             <SaveBtn
               onClick={() => {
-                if (selectedDates.length === 1) {
-                  alert("날짜는 2개 이상 선택해야 합니다.");
+                if (selectedDates.length <= 1) {
+                  alert("날짜는 2개 이상 선택해주세요.");
                   return;
                 }
                 setStep(3);
@@ -252,10 +269,12 @@ export default function VoteCreate() {
             >
               다음
             </SaveBtn>
+
+            <HomeButton onClick={goHome}>홈으로</HomeButton>
           </>
         )}
 
-        {/* 3단계 ― 메뉴 입력 */}
+        {/* STEP 3 */}
         {step === 3 && (
           <>
             <h3>3단계: 메뉴를 입력해주세요</h3>
@@ -264,7 +283,6 @@ export default function VoteCreate() {
               <input
                 value={menuInput}
                 onChange={(e) => setMenuInput(e.target.value)}
-                onKeyDown={handleMenuKeyDown}
                 placeholder="메뉴 입력"
               />
               <button onClick={addMenu}>추가</button>
@@ -292,6 +310,8 @@ export default function VoteCreate() {
             </ChipBox>
 
             <SaveBtn onClick={saveVoteHandler}>투표 저장하기</SaveBtn>
+
+            <HomeButton onClick={goHome}>홈으로</HomeButton>
           </>
         )}
       </Wrap>

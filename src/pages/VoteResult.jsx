@@ -1,3 +1,5 @@
+// src/pages/VoteResult.jsx
+
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import styled from "styled-components";
@@ -16,7 +18,51 @@ import {
 
 import { getVoteById } from "../api/api";
 
+/* 공유 아이콘 (MIT License) */
+const ShareIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    width="18"
+    height="18"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M7.5 12a4.5 4.5 0 018.243-2.121l3.257 3.257a4.5 4.5 0 11-1.414 1.414l-3.257-3.257A4.5 4.5 0 017.5 12z"
+    />
+  </svg>
+);
+
 /* 스타일 */
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const ShareButton = styled.button`
+  padding: 8px 12px;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
+const RankCard = styled.div`
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 10px;
+  margin-bottom: 20px;
+`;
+
 const Section = styled.div`
   margin-bottom: 40px;
 `;
@@ -39,13 +85,12 @@ export default function VoteResult() {
 
   const goHome = () => navigate("/");
 
-  /* 투표 데이터 가져오기 (api.js 사용) */
+  /* 투표 데이터 가져오기 */
   useEffect(() => {
     async function loadVote() {
       const data = await getVoteById(id);
       setVote(data);
     }
-
     loadVote();
   }, [id]);
 
@@ -57,7 +102,19 @@ export default function VoteResult() {
     );
   }
 
-  /* 차트 데이터 준비 */
+  /* 1위 계산 함수 */
+  const getFirstRank = (obj = {}) => {
+    const arr = Object.entries(obj)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    return arr[0] || null;
+  };
+
+  const dateFirst = getFirstRank(vote.results?.dates);
+  const menuFirst = getFirstRank(vote.results?.menus);
+
+  /* 차트 데이터 */
   const dateChartData = (vote.dates || []).map((date) => ({
     name: date,
     value: vote.results?.dates?.[date] || 0,
@@ -68,59 +125,79 @@ export default function VoteResult() {
     value: vote.results?.menus?.[menu] || 0,
   }));
 
-  const colors = [
-    "#1976d2",
-    "#ff9800",
-    "#4caf50",
-    "#e91e63",
-    "#9c27b0",
-    "#009688",
-  ];
+  const colors = ["#1976d2", "#ff9800", "#4caf50", "#e91e63", "#9c27b0"];
+
+  /* 공유 기능: 텍스트 복사 */
+  const share = async () => {
+    const url = `${window.location.origin}/vote/result/${id}`;
+
+    const text = `투표 결과 안내\n\n날짜 1위: ${
+      dateFirst ? `${dateFirst.name} (${dateFirst.value}표)` : "없음"
+    }\n메뉴 1위: ${
+      menuFirst ? `${menuFirst.name} (${menuFirst.value}표)` : "없음"
+    }\n\n결과 자세히 보기: ${url}`;
+
+    await navigator.clipboard.writeText(text);
+    alert("결과 정보가 클립보드에 복사되었습니다.");
+  };
 
   return (
     <PageContainer>
-      <h2>투표 결과</h2>
+      <Header>
+        <h2>투표 결과</h2>
+        <ShareButton onClick={share}>
+          공유
+        </ShareButton>
+      </Header>
 
+      <RankCard>
+        <h3>요약 결과</h3>
+
+        <p>
+          <strong>날짜 1위:</strong>{" "}
+          {dateFirst ? `${dateFirst.name} (${dateFirst.value}표)` : "없음"}
+        </p>
+
+        <p style={{ marginTop: "12px" }}>
+          <strong>메뉴 1위:</strong>{" "}
+          {menuFirst ? `${menuFirst.name} (${menuFirst.value}표)` : "없음"}
+        </p>
+      </RankCard>
+
+      {/* 날짜 차트 */}
       <Section>
         <h3>날짜 인기 순위</h3>
-        {dateChartData.length === 0 ? (
-          <p>날짜 항목이 없습니다.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={dateChartData}>
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="value">
-                <LabelList dataKey="value" position="top" />
-                {dateChartData.map((entry, index) => (
-                  <Cell key={index} fill={colors[index % colors.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={dateChartData}>
+            <XAxis dataKey="name" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="value">
+              <LabelList dataKey="value" position="top" />
+              {dateChartData.map((entry, index) => (
+                <Cell key={index} fill={colors[index % colors.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </Section>
 
+      {/* 메뉴 차트 */}
       <Section>
         <h3>메뉴 인기 순위</h3>
-        {menuChartData.length === 0 ? (
-          <p>메뉴 항목이 없습니다.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={menuChartData}>
-              <XAxis dataKey="name" />
-              <YAxis allowDecimals={false} />
-              <Tooltip />
-              <Bar dataKey="value">
-                <LabelList dataKey="value" position="top" />
-                {menuChartData.map((entry, index) => (
-                  <Cell key={index} fill={colors[index % colors.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={menuChartData}>
+            <XAxis dataKey="name" />
+            <YAxis allowDecimals={false} />
+            <Tooltip />
+            <Bar dataKey="value">
+              <LabelList dataKey="value" position="top" />
+              {menuChartData.map((entry, index) => (
+                <Cell key={index} fill={colors[index % colors.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </Section>
 
       <HomeButton onClick={goHome}>홈으로</HomeButton>
