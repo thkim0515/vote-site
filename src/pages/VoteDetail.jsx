@@ -137,10 +137,40 @@ export default function VoteDetail() {
   /* 공유하기 */
   const share = async () => {
     const url = `${window.location.origin}/vote/detail/${id}`;
-    const text = `투표하세요!\n\n링크: ${url}`;
-    await navigator.clipboard.writeText(text);
-    alert("투표 링크가 복사되었습니다.");
+    const text = `투표하세요!\n\n${url}`;
+
+    // 1) clipboard API 지원 시
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        alert("투표 링크가 복사되었습니다.");
+        return;
+      } catch (e) {
+        // clipboard API 실패 → fallback
+      }
+    }
+
+    // 2) Fallback: execCommand 방식
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.top = "-1000px";
+    textarea.style.opacity = "0";
+
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    const success = document.execCommand("copy");
+    document.body.removeChild(textarea);
+
+    if (success) {
+      alert("투표 링크가 복사되었습니다.");
+    } else {
+      alert("복사가 지원되지 않는 환경입니다. 직접 복사해주세요.");
+    }
   };
+
 
   /* 투표 제출 */
   const onSubmitVote = async () => {

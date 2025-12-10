@@ -137,9 +137,37 @@ export default function VoteResult() {
       menuFirst ? `${menuFirst.name} (${menuFirst.value}표)` : "없음"
     }\n\n결과 자세히 보기: ${url}`;
 
-    await navigator.clipboard.writeText(text);
-    alert("결과 정보가 클립보드에 복사되었습니다.");
+    // 1) 최신 브라우저에서 clipboard API 지원 시
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        alert("결과 정보가 클립보드에 복사되었습니다.");
+        return;
+      } catch (e) {
+        // 실패 시 아래 fallback 실행
+      }
+    }
+
+    // 2) Fallback: textarea를 만들어 복사
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+
+    if (copied) {
+      alert("결과 정보가 클립보드에 복사되었습니다.");
+    } else {
+      alert("복사를 지원하지 않는 환경입니다. 직접 복사해주세요.");
+    }
   };
+
 
   return (
     <PageContainer>
