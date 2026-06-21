@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/vote-site/static/css/main.ff1b84b8.css",
+    "main.js": "/vote-site/static/js/main.7fc0ff0d.js",
+    "index.html": "/vote-site/index.html",
+    "main.ff1b84b8.css.map": "/vote-site/static/css/main.ff1b84b8.css.map",
+    "main.7fc0ff0d.js.map": "/vote-site/static/js/main.7fc0ff0d.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.ff1b84b8.css",
+    "static/js/main.7fc0ff0d.js"
+  ]
+}
