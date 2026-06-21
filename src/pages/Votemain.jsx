@@ -35,6 +35,9 @@ export default function Votemain() {
         <Button variant="outlined" component={Link} to="/vote/history">
           이전 투표 보기
         </Button>
+        <Button variant="outlined" component={Link} to="/allowance">
+          용돈기입장
+        </Button>
       </Stack>
 
       <Typography variant="h6" gutterBottom>

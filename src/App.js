@@ -6,17 +6,18 @@ import VoteList from "./pages/VoteList";
 import VoteDetail from "./pages/VoteDetail";
 import VoteHistory from "./pages/VoteHistory";
 import VoteResult from "./pages/VoteResult";
+import AllowanceLedger from "./pages/AllowanceLedger";
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Votemain />} />
       <Route path="/vote/create" element={<VoteCreate />} />
-      <Route path="/vote/list" element={<VoteList />} />               
-      <Route path="/vote/detail/:id" element={<VoteDetail />} />       
+      <Route path="/vote/list" element={<VoteList />} />
+      <Route path="/vote/detail/:id" element={<VoteDetail />} />
       <Route path="/vote/history" element={<VoteHistory />} />
       <Route path="/vote/result/:id" element={<VoteResult />} />
-
+      <Route path="/allowance" element={<AllowanceLedger />} />
     </Routes>
   );
 }
